@@ -1,0 +1,232 @@
+%% Ultrasound simulation - multilayer structure
+% Water (4mm) -> Parylene-C or PMMA (10μm) -> Glass (1mm)
+clear; close all; clc;
+%% Parameters
+f0 = 40e6;          
+
+% Acoustic properties of materials
+c_water = 1500;     
+c_parylene = 2200;  
+c_glass = 4200;     
+
+rho_water = 1000;   
+rho_parylene = 1280; 
+rho_glass = 2500;   
+
+% Layer geometry
+water_thickness = .2e-3;     
+parylene_thickness = 10e-6; 
+glass_thickness = 1e-3;     
+source_position = 1;       
+
+%% Grid parameters
+dx = 1e-6;
+
+% Calculate minimum required grid size
+total_thickness = water_thickness + parylene_thickness + glass_thickness;
+min_grid_points = ceil(total_thickness / dx); %+ 100; % Add buffer % ceil is the function rounds each element of X to the nearest integer
+
+% Ensure grid is large enough for all layers
+Nx = max(min_grid_points);
+kgrid = kWaveGrid(Nx, dx);
+
+%% Medium properties 
+medium.sound_speed = c_water * ones(Nx, 1);
+medium.density = rho_water * ones(Nx, 1);
+
+% Define layer boundaries
+water_start = 1;
+water_end = (round(water_thickness/dx));
+parylene_start = water_end;
+parylene_end = round(parylene_start + parylene_thickness/dx);
+glass_start = parylene_end;
+glass_end = (glass_start + round(glass_thickness / dx));
+
+
+% Set Parylene-C layer properties
+
+medium.sound_speed(parylene_start:parylene_end) = c_parylene;
+medium.density(parylene_start:parylene_end) = rho_parylene;
+
+% Set Glass layer properties
+
+medium.sound_speed(glass_start:glass_end) = c_glass;
+medium.density(glass_start:glass_end) = rho_glass;
+
+% Attenuation setup (in dB/(MHz^y·cm))
+medium.alpha_coeff = zeros(Nx,1);
+
+medium.alpha_power = 1.5;
+% Water
+medium.alpha_coeff(water_start:water_end) = 0.0022;  % dB/(MHz^2·cm)
+
+% Parylene-C
+if parylene_start <= Nx && parylene_end <= Nx
+    medium.alpha_coeff(parylene_start:parylene_end) = 0.2;  % dB/(MHz^1.5·cm)
+end
+
+% Glass
+if glass_start <= Nx && glass_end <= Nx
+    medium.alpha_coeff(glass_start:glass_end) = 0.1;  % dB/(MHz·cm)
+end
+
+%% Time array
+% Calculate expected echo times for different interfaces
+distance_water_parylene = (water_end+8) * dx; % - source_position
+expected_echo_water_parylene = 2 * distance_water_parylene / c_water;
+
+distance_parylene_water = (parylene_end - water_end) * dx;
+expected_echo_parylene_water = 2 * distance_parylene_water / c_parylene;
+expected_echo_parylene_glass = expected_echo_water_parylene + expected_echo_parylene_water;
+
+distance_water_glass = (glass_end- source_position) * dx; %
+expected_echo_water_glass = 2 * distance_water_glass / c_water;
+
+
+% Use maximum sound speed for stability
+c_max = max([c_water, c_parylene, c_glass]);
+t_end = expected_echo_parylene_glass * 1.2; % Extended for multiple echoes
+kgrid.t_array = makeTime(kgrid, c_max, 0.3, t_end);
+
+%% Source definition
+source.p_mask = zeros(Nx, 1);
+source.p_mask(source_position) = 1;
+
+tone_burst_cycles = 1;
+input_signal = toneBurst(1/kgrid.dt, f0, tone_burst_cycles);
+source.p = input_signal;
+
+%% Sensor definition
+sensor.mask = zeros(Nx, 1);
+sensor.mask(source_position) = 1;
+sensor.record = {'p'};
+
+%% Run simulation with animation
+fprintf('\nRunning simulation...\n');
+input_args = {
+    'PMLInside', false, ...
+    'PMLSize', 10, ...
+    'DataCast', 'single', ...
+    'PlotSim', true, ...
+    'PlotLayout', true ...
+    };
+
+sensor_data = kspaceFirstOrder1D(kgrid, medium, source, sensor, input_args{:});
+echo_signal_withpolumer = sensor_data.p;
+
+fprintf('Simulation completed!\n');
+
+%% run without polymer layer --> make polymer layer with water properties
+ medium.sound_speed(parylene_start:parylene_end) = c_water;
+ medium.density(parylene_start:parylene_end) = rho_water;
+ medium.alpha_coeff(parylene_start:parylene_end) = 0.0022;  % dB/(MHz^2·cm)
+
+fprintf('\nRunning simulation without polymer...\n');
+input_args = {
+    'PMLInside', false, ...
+    'PMLSize', 10, ...
+    'DataCast', 'single', ...
+    'PlotSim', true, ...
+    'PlotLayout', true ...
+    };
+
+sensor_data_nopoly = kspaceFirstOrder1D(kgrid, medium, source, sensor, input_args{:});
+echo_signal_nopoly = sensor_data_nopoly.p;
+
+fprintf('Simulation completed!\n');
+%% plot difference
+
+figure, nexttile, plot(kgrid.t_array,echo_signal_withpolumer),
+hold on, plot(kgrid.t_array,echo_signal_nopoly), 
+nexttile, plot(kgrid.t_array,echo_signal_withpolumer-echo_signal_nopoly)
+
+%% downsample signals to match 500 MHz
+downsample_factor = round(1 / (500e6 * kgrid.dt));
+echo_signal_ds = downsample(echo_signal_withpolumer, downsample_factor);
+echo_signal_nopoly_ds = downsample(echo_signal_nopoly, downsample_factor);
+ds_time = downsample(kgrid.t_array, downsample_factor);
+
+nexttile, plot(ds_time,echo_signal_ds),
+hold on, plot(ds_time,echo_signal_nopoly_ds), 
+nexttile, plot(ds_time,echo_signal_ds-echo_signal_nopoly_ds)
+shg
+return
+%% Plot 3: Zoom on echo region - Larger subplot
+figure;
+zoom_start = round(expected_echo_water_parylene/ kgrid.dt) -300 ;
+zoom_end = round(expected_echo_water_glass / kgrid.dt) + 100;
+zoom_range = zoom_start:min(zoom_end, length(echo_signal_withpolumer));
+
+% Extract the zoomed signal
+zoomed_signal = echo_signal_withpolumer(zoom_range);
+zoomed_time = kgrid.t_array(zoom_range) * 1e6;
+
+plot(zoomed_time, zoomed_signal, 'b-', 'LineWidth', 2);
+xlabel('Time [μs]');
+ylabel('Pressure [Pa]');
+% xlim([5.33,5.5])
+title('Zoom: Echo Region with Positive Peaks');
+grid on;
+hold on;
+
+% Mark expected echo times
+plot(expected_echo_water_parylene * 1e6, 0, 'rx', 'MarkerSize', 10, 'LineWidth', 2);
+plot(expected_echo_parylene_glass * 1e6, 0, 'gx', 'MarkerSize', 10, 'LineWidth', 2);
+
+% Detect only positive peaks in the zoomed region
+[positive_peaks, positive_locations] = findpeaks(zoomed_signal, ...
+    'MinPeakHeight', max(zoomed_signal)*0.1, ...  % Only peaks above 10% of max in this region
+    'MinPeakDistance', 10);
+
+if ~isempty(positive_peaks)
+    % Plot red circles around positive peaks
+    plot(zoomed_time(positive_locations), positive_peaks, ...
+         'ro', 'MarkerSize', 8, 'LineWidth', 2, 'MarkerFaceColor', 'none');
+    
+    % Add text annotations for positive peak times
+    for i = 1:length(positive_peaks)
+        text(zoomed_time(positive_locations(i)), ...
+             positive_peaks(i) + 0.15 * max(zoomed_signal), ...
+             sprintf('%.2f μs\n%.3f Pa', zoomed_time(positive_locations(i)), positive_peaks(i)), ...
+             'HorizontalAlignment', 'center', 'FontSize', 9, 'FontWeight', 'bold', ...
+             'Color', 'red', 'BackgroundColor', 'white', 'EdgeColor', 'red');
+    end
+    
+    % Calculate and display Δt between first two peaks
+    if length(positive_peaks) >= 2
+        delta_t = zoomed_time(positive_locations(2)) - zoomed_time(positive_locations(1));
+        
+        % Calculate polymer thickness
+        % Δt represents round-trip time through polymer, so one-way time = Δt/2
+        delta_t_seconds = delta_t * 1e-6;  % Convert μs to seconds
+        one_way_time = delta_t_seconds / 2;
+        calculated_thickness = c_parylene * one_way_time;  % thickness in meters
+        calculated_thickness_um = calculated_thickness * 1e6;  % Convert to micrometers
+        
+        % Display Δt and thickness on the plot
+        mid_time = (zoomed_time(positive_locations(1)) + zoomed_time(positive_locations(2))) / 2;
+        mid_amplitude = (positive_peaks(1) + positive_peaks(2)) / 2;
+        
+        % Create text box with both Δt and thickness
+        annotation_text = {sprintf('Δt = %.2f μs', delta_t), ...
+                          sprintf('d = %.1f μm', calculated_thickness_um)};
+        
+        text(mid_time, mid_amplitude, annotation_text, ...
+             'HorizontalAlignment', 'center', 'FontSize', 11, 'FontWeight', 'bold', ...
+             'Color', 'blue', 'BackgroundColor', 'white', 'EdgeColor', 'blue', ...
+             'VerticalAlignment', 'middle');
+        
+        % Also print to command window
+        fprintf('\n=== PEAK TIME DIFFERENCE & THICKNESS CALCULATION ===\n');
+        fprintf('Peak 1: %.2f μs, Peak 2: %.2f μs\n', ...
+                zoomed_time(positive_locations(1)), zoomed_time(positive_locations(2)));
+        fprintf('Time difference (Δt): %.2f μs\n', delta_t);
+        fprintf('One-way time through polymer: %.2f μs\n', delta_t/2);
+        fprintf('Parylene-C sound speed: %.0f m/s\n', c_parylene);
+        fprintf('Calculated polymer thickness: %.1f μm\n', calculated_thickness_um);
+        fprintf('Expected polymer thickness: %.1f μm\n', parylene_thickness * 1e6);
+        fprintf('Error: %.1f μm\n', abs(calculated_thickness_um - parylene_thickness * 1e6));
+    end
+end
+
+legend('Signal', 'expected Water-Parylene interface', 'expected Parylene-Glass interface', 'Location', 'best');
