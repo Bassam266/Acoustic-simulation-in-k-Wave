@@ -12,9 +12,14 @@ The simulation script: MultiLaylerSimulation_2.m
 
 ![Sumulation results ](Image_2.png)
 
-In the second simulation, we used a spring model to measure the thin film of the polymer using the pulse-echo method, 
+In the third simulation, we used a spring model to measure the thin film of the polymer using the pulse-echo method. The method was implemented as discussed in the following paper: https://royalsocietypublishing.org/rspa/article-abstract/459/2032/957/81361/The-measurement-of-lubricant-film-thickness-using?redirectedFrom=fulltext
+The k-wave simulation results are comparable to the original results from the paper, as shown in the figure below 
 
+![Sumulation results ](Image_3.png)
 
+The two simulation was preforem, firt one is known as the reference simulation to collect the echo from the second interface of the glass, and the second simulation is related to collecting the echo from the glass-film interface, and the echo amplitude will abit change with thickness of the film. The uniqe in the sethod, we can measure the thin film using ultrasound waves in tens of MHz, but required the density and the velocity of the thin film for the calculation.
+Th
+The simulation script: Kwave_simulation_with_Spring_model.m
 
 
 Note: Always remember to put the k-Wave toolbox in your path. 
