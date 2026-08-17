@@ -1,9 +1,7 @@
 # Acoustic Simulation in k-Wave
-
 A set of 1D k-Wave simulations exploring the limits of measuring thin-film thickness and acoustic/mechanical properties using the time-of-flight (ToF) and pulse-echo methods.
 
 ## Simulation 1 — Time-of-Flight Limitations
-
 The first simulation studies the limitations of measuring thin-film thickness and acoustic/mechanical properties using the ToF. It helps us understand how different acoustic impedances — arising from different polymer layers — influence the time of flight, and how this links to the ultrasound frequency.
 
 **Script:** `Pulse_echo_Simulation_water_glass_film_glass_1.m`
@@ -14,7 +12,6 @@ The first simulation studies the limitations of measuring thin-film thickness an
 </p>
 
 ## Simulation 2 — Influence of the Polymer Film on the Reflected Echo
-
 The second simulation focuses on the influence of the thin polymer layer on the reflected echo. The result is compared against a reference (a glass substrate) and tested across different sampling rates.
 
 **Script:** `MultiLayerSimulation_2.m`
@@ -25,7 +22,6 @@ The second simulation focuses on the influence of the thin polymer layer on the 
 </p>
 
 ## Simulation 3 — Spring-Model Thickness Measurement
-
 The third simulation uses a **spring model** to measure the thin polymer film with the pulse-echo method, implemented as described in the following paper:
 
 > Dwyer-Joyce et al., *The measurement of lubricant film thickness using ultrasound*, Proc. R. Soc. Lond. A **459** (2032), 957–976.
@@ -47,4 +43,27 @@ The strength of this method is that it can measure a thin film using ultrasound 
 
 **Script:** `Kwave_simulation_with_Spring_model.m`
 
-> **Note:** Always remember to add the k-Wave toolbox to your MATLAB path.
+## Simulation 4 — Time-Resolved Acoustic Microscopy Approach
+This approach relies on the geometrical defocusing of the ultrasound wave using a focused ultrasound transducer to extract both the acoustic/mechanical properties of the film and its thickness. The key advantage of this approach is that it does **not** require any prior knowledge of the film properties, which makes it ideal for tracking changes in the mechanical properties of the film.
+
+The implementation is based on the following paper:
+
+> *[Jian Chen, Xiaolong Bai, Keji Yang, and Bing-Feng Ju, Simultaneously measuring thickness, density, velocity and attenuation of thin layers using V(z, t) data from time-resolved acoustic microscopy, Ultrasonics, 2015, 505–511]*
+> https://www.sciencedirect.com/science/article/pii/S0041624X14002832
+
+The k-Wave simulation shows good agreement with the experimental results, as shown below.
+
+<p align="center">
+  <img src="Image_4.jpg" width="60%" /><br>
+  <em>Figure 4 — S2 and S3 echoes from the measurement in the paper compared with the k-Wave simulation.</em>
+</p>
+
+The animation below illustrates the defocusing approach used in time-resolved acoustic microscopy.
+
+<p align="center">
+  <img src="animation_1.gif" width="60%" /><br>
+  <em>Figure 5 — Animation of the defocusing approach.</em>
+</p>
+
+**Script:** `Time_resolve_acoustic_microscopy.m` The script is still under development 
+
