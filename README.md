@@ -67,7 +67,4 @@ The animation below illustrates the defocusing approach used in time-resolved ac
 
 **Script:** `Time_resolve_acoustic_microscopy.m` The script is still under development 
 
-A complete, runnable end-to-end version of this pipeline — defocus scan, V(z,t) construction, temporal-FFT/phase-corrected reflectivity extraction, and nonlinear fitting of the three-layer analytical model to obtain thickness/velocity/density/attenuation — is implemented in `Time_resolved_AM_VzT_analysis.m`. It exposes a `scan_mode` switch (`'coarse'` vs `'fine'`) at the top of the script: use `'coarse'` (large z-step, few points) to quickly test the full pipeline locally, then switch to `'fine'` (5 um step, matching the paper's resolution) for the full run on a server. The script finishes by plotting the simulated reflectivity spectrum against the fitted theoretical curve and reporting the extraction error against the known simulation ground truth.
-
-**Script:** `Time_resolved_AM_VzT_analysis.m`
 
