@@ -1,5 +1,4 @@
 # Acoustic Simulation in k-Wave
-A set of 1D k-Wave simulations exploring the limits of measuring thin-film thickness and acoustic/mechanical properties using the time-of-flight (ToF) and pulse-echo methods.
 
 ## Simulation 1 — Time-of-Flight Limitations
 The first simulation studies the limitations of measuring thin-film thickness and acoustic/mechanical properties using the ToF. It helps us understand how different acoustic impedances — arising from different polymer layers — influence the time of flight, and how this links to the ultrasound frequency.
